@@ -45,7 +45,7 @@ def build_markov_model(markov_model: dict, new_text: str, order: int = 1) -> dic
     
     Args: 
         markov_model (dict of dicts): a dictionary of word:(next_word:frequency pairs)
-        new_text (str): a string to build or add to the moarkov_model or a text file to read
+        new_text (str): a string to build or add to the moarkov_model
 
     Returns:
         markov_model (dict of dicts): an updated markov_model
@@ -59,80 +59,39 @@ def build_markov_model(markov_model: dict, new_text: str, order: int = 1) -> dic
     # TODO: file implementation needs read-in func
 
     # Split string of words into list of states
-    with open(new_text, mode='r', encoding='utf-8') as infile:
-        for line_num, line in enumerate(infile):
-            if line_num == 0:
-                text = ("*S* " * order + line)
-                text = text.split()
-                text[-1] = text[-1] + "\n"
-                states = text
-            else:
-                text = line.split()
-                text[-1] = text[-1] + "\n"
-                states = text
+    states_string = "*S* " * order + new_text
+    states = states_string.split()
 
-            # Create list of nth order states from states list
-            states = nth_states(states, order)
+    # Create list of nth order states from states list
+    states = nth_states(states, order)
 
-            # Correct overlap after return character
-            if(order > 1) and (line_num > 0):
-                next_state = states[0]
-
-                # update markov_model with current state before overlap fix
-                if current_state not in markov_model:
-                    markov_model[current_state] = {}
-
-                # Update 
-                if next_state[0] not in markov_model[current_state]:
-                    markov_model[current_state][next_state[0]] = 1
-                else:
-                    markov_model[current_state][next_state[0]] += 1
-
-                for x in range(order - 1):
-                    olap = (*current_state[-order + 1 + x:], *next_state[:x+1])
-                    if olap not in markov_model:
-                        markov_model[olap] = {}
-                    try:
-                        if next_state[x + 1] not in markov_model[olap]:
-                            markov_model[olap][next_state[x+1]] = 1
-                        else:
-                            markov_model[olap][next_state[x+1]] += 1
-                    except(IndexError):
-                        print(x+1)
-                        print(next_state)
-                        exit()
-
-
-
-            # Loop through states until all states viewed
-            current_state = states[0]
-            
-            for ind, next_state in enumerate(states):
-                if ind == 0:
-                    continue
-                # Check if current state in markov dict else add
-                if current_state not in markov_model:
-                    markov_model[current_state] = {}
-                
-                # Get next string from next_state tuple
-                next_word = next_state[-1]
-
-                # Check if next word in current state transition dict 
-                # Add 1 to frequency if is else create transition w/ freq 1
-                if next_word in markov_model[current_state]:
-                    markov_model[current_state][next_word] += 1
-                else:
-                    markov_model[current_state][next_word] = 1
-
-                current_state = next_state
+    # Loop through states until all states viewed
+    current_state = states[0]
     
-    if next_state not in markov_model:
-        markov_model[next_state] = {}
-    if "*E*" not in markov_model[next_state]:
-        markov_model[next_state]["*E*"] = 1
-    else:
-        markov_model[next_state]["*E*"] += 1
+    for ind, next_state in enumerate(states):
+        if ind == 0:
+            continue
+        # Check if current state in markov dict else add
+        if current_state not in markov_model:
+            markov_model[current_state] = {}
+        
+        # Get next string from next_state tuple
+        next_word = next_state[-1]
 
+        # Check if next word in current state transition dict 
+        # Add 1 to frequency if is else create transition w/ freq 1
+        if next_word in markov_model[current_state]:
+            markov_model[current_state][next_word] += 1
+        else:
+            markov_model[current_state][next_word] = 1
+
+        if ind == len(states) - 1:
+            if next_state not in markov_model:
+                markov_model[next_state] = {}
+            markov_model[next_state]["*E*"] = 1
+
+        current_state = next_state
+        
     return markov_model
 
 def read_into_markov(filepath, markov_model, order):
@@ -231,9 +190,13 @@ def generate_random_text(markov_model, seed=42):
 if __name__ == "__main__":
     text = "one fish two fish red fish blue fish"
     file = "data/one_fish_two_fish.txt"
-    n = 3
+    n = 1
     mark = {}
-    mark = build_markov_model(new_text=file, markov_model=mark, order=n)
+    mark = read_into_markov(filepath=file, markov_model=mark, order=n)
     print(mark)
-    # print(generate_random_text(mark))
+    print(generate_random_text(mark))
+    with open(file, mode='r', encoding='utf-8') as infile:
+        with open("data/mark_out.txt", mode='w', encoding='utf-8') as outfile:
+            for line in infile:
+                print(generate_random_text(mark), file=outfile)
 
